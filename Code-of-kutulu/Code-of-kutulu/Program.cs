@@ -27,7 +27,7 @@ class Wanderer : Entity
     public bool isSpawned;
 }
 
-class GraphCase
+class GraphCase : IEnumerable
 {
     public GraphCase up;
     public GraphCase right;
@@ -44,12 +44,24 @@ class GraphCase
     {
         Console.WriteLine("MOVE "+x+" "+y+" "+msg);
     }
+    
+    public IEnumerator GetEnumerator()
+    {
+        if(up != null)
+            yield return up;
+        if(right != null)
+            yield return right;
+        if(down != null)
+            yield return down;
+        if(left != null)
+            yield return left;
+    }
 }
 
 
-class Player
+public class Player
 {
-    static void Main(string[] args)
+    static public void Main(string[] args)
     {
         string[] inputs;
         Game game = new Game(int.Parse(Console.ReadLine()), int.Parse(Console.ReadLine()));
@@ -74,7 +86,9 @@ class Player
         int entityCount = int.Parse(Console.ReadLine()); // the first given entity corresponds to your explorer
         for (int i = 0; i < entityCount; i++)
         {
-            inputs = Console.ReadLine().Split(' ',5);
+            inputs = Console.ReadLine().Split(' ');
+            //write inputs to error console
+            Console.Error.WriteLine("INPUTS: "+inputs[0]+" "+inputs[1]+" "+inputs[2]+" "+inputs[3]+" "+inputs[4]+" "+inputs[5]);
             game.addEntity(inputs[0], int.Parse(inputs[1]), int.Parse(inputs[2]), int.Parse(inputs[3]), int.Parse(inputs[4]), i==0);
         }
         game.firstProcess();
@@ -173,6 +187,7 @@ class Game
              e.id = id;
              e.x = x;
              e.y = y;
+             e.position = graph[x, y];
              e.hp = param0;
              graph[x, y].explorers.Add(e);
              explorers.Add(e);
@@ -183,6 +198,7 @@ class Game
              w.id = id;
              w.x = x;
              w.y = y;
+             w.position = graph[x, y];
              w.remainingTimeMoves = param0;
              w.isSpawned = false;
              graph[x, y].wanderers.Add(w);
@@ -233,7 +249,7 @@ class Game
                  w.remainingTimeMoves = param0;
                  w.remainingTimeNextCall = param2;
                  w.isSpawned = param1 == 1;
-                 w.target = param2 == -1 ? null : explorers.Find(x => x.id == param2); 
+                 w.target = param2 == -1 ? null : (param2 == myExplorer.id ? myExplorer : explorers.Find(x => x.id == param2)); 
                  return;
              }
          }
@@ -245,24 +261,33 @@ class Game
          if (actualEntityIdsLength != explorers.Count + wanderers.Count)
          {
              int diff = actualEntityIds.Count - (explorers.Count + wanderers.Count);
-             foreach (Wanderer w in wanderers)
+             int i = 0;
+             while (i<wanderers.Count && diff > 0)
+             {
+                 Wanderer w = wanderers[i];
                  if (!actualEntityIds.Contains(w.id))
-                 {
+                 { 
                      w.position.wanderers.Remove(w);
                      wanderers.Remove(w);
                      diff--;
-                     if (diff == 0)
-                         return;
                  }
-             foreach (Explorer e in explorers)
+
+                 i++;
+             }
+
+             i = 0;
+             while (i < explorers.Count && diff > 0)
+             {
+                 Explorer e = explorers[i];
                  if (!actualEntityIds.Contains(e.id))
                  {
                      e.position.explorers.Remove(e);
                      explorers.Remove(e);
                      diff--;
-                     if (diff == 0)
-                         return;
-                 } 
+                 }
+
+                 i++;
+             }
          }
      }
 
@@ -279,6 +304,7 @@ class Game
      public void firstProcess()
      {
          backTrack = new int[lengthGraph];
+         process();
      }
 
      public void processInit()
@@ -294,23 +320,31 @@ class Game
          Queue<GraphCase> queueA = new Queue<GraphCase>();
          Queue<GraphCase> queueB = new Queue<GraphCase>();
          queueA.Enqueue(myExplorer.position);
+         backTrack[myExplorer.position.index] = -2;
          Explorer[] explorersSort = new Explorer[explorers.Count];
          int iE = 0;
          Wanderer[] wanderersSort = new Wanderer[wanderers.Count];
          int iW = 0;
          while (queueA.Count != 0)
          {
-             foreach (GraphCase c in queueA)
+             while (queueA.Count != 0)
              {
+                 GraphCase c = queueA.Dequeue();
                  if (c.wanderers.Count != 0)
                  {
+                     bool isTargetingMe = false;
                      foreach (Wanderer w in c.wanderers)
                      {
-                         wanderersSort[iW] = w;
-                         iW++;
+                         if (true || w.target == myExplorer)
+                         {
+                             wanderersSort[iW] = w;
+                             iW++;
+                             isTargetingMe = true;
+                             break;
+                         }
                      }
-
-                     continue;
+                     if (isTargetingMe)
+                         continue;
                  }
 
                  if (c.up != null && backTrack[c.up.index] == -1)
@@ -337,35 +371,81 @@ class Game
                      queueB.Enqueue(c.right);
                  }
 
-                 if (c.explorers != null)
+                 if (c.explorers.Count != 0)
                  {
-                     foreach (Explorer e in c.explorers)
-                     {
-                         explorersSort[iE] = e;
-                         iE++;
-                     }
+                     explorersSort[iE] = c.explorers[0];
+                     iE++;
                  }
              }
-
+             (queueA, queueB) = (queueB, queueA);
              deep++;
          }
-
+         
+         GraphCase moveOther = null;
          List<GraphCase>[] pathWanderers = new List<GraphCase>[iW];
          for (int i = 0; i < iW; i++)
          {
              pathWanderers[i] = new List<GraphCase>();
              int index = wanderersSort[i].position.index;
-             while (index != -1)
+             while (index != -2)
              {
                  pathWanderers[i].Add(graphCase[index]);
                  index = backTrack[index];
              }
+             if (pathWanderers[i].Count == 1)
+                 moveOther = pathWanderers[i][0];
          }
 
+         List<GraphCase>[] pathExplorers = new List<GraphCase>[iE];
          for (int i = 0; i < iE; i++)
          {
-             
+             pathExplorers[i] = new List<GraphCase>();
+             int index = explorersSort[i].position.index;
+             while (index != -2)
+             {
+                 pathExplorers[i].Add(graphCase[index]);
+                 index = backTrack[index];
+             }
          }
-     }
+         
+         if (moveOther != null)
+         {
+             GraphCase moveValid = pathExplorers.Single(x => x[0] == moveOther)[0];
+             if (moveValid != null)
+             {
+                 moveValid.actionMove();
+                 return;
+             }
+             foreach (GraphCase e in myExplorer.position)
+                 if (e!=moveOther)
+                 {
+                     e.actionMove();
+                     return;
+                 }
+             moveOther.actionMove();
+             return;
+         }
+         moveOther = iW==0?null:pathWanderers[0].Count==0?null:pathWanderers[0][0];
+         foreach (var e in pathExplorers)
+         {
+             if(e[0]!=moveOther)
+             {
+                 e[0].actionMove();
+                 return;
+             }
+         }
 
+         if (pathExplorers.Length != 0)
+         {
+             pathExplorers[0][0].actionMove();
+             return;
+         }
+         foreach (GraphCase e in myExplorer.position)
+             if (e!=moveOther)
+             {
+                 e.actionMove();
+                 return;
+             }
+         moveOther.actionMove();
+     }
 }
