@@ -58,7 +58,6 @@ class GraphCase : IEnumerable
     }
 }
 
-
 public class Player
 {
     static public void Main(string[] args)
@@ -87,8 +86,6 @@ public class Player
         for (int i = 0; i < entityCount; i++)
         {
             inputs = Console.ReadLine().Split(' ');
-            //write inputs to error console
-            Console.Error.WriteLine("INPUTS: "+inputs[0]+" "+inputs[1]+" "+inputs[2]+" "+inputs[3]+" "+inputs[4]+" "+inputs[5]);
             game.addEntity(inputs[0], int.Parse(inputs[1]), int.Parse(inputs[2]), int.Parse(inputs[3]), int.Parse(inputs[4]), i==0);
         }
         game.firstProcess();
@@ -410,7 +407,16 @@ class Game
          
          if (moveOther != null)
          {
-             GraphCase moveValid = pathExplorers.Single(x => x[0] == moveOther)[0];
+             GraphCase moveValid = null;
+             foreach (List<GraphCase> list in pathExplorers)
+             {
+                 if(list.Count != 0 && list[0] != moveOther)
+                 {
+                     moveValid = list[0];
+                     break;
+                 }
+             }
+             
              if (moveValid != null)
              {
                  moveValid.actionMove();
