@@ -156,6 +156,11 @@ class Game
         explorers = new List<Explorer>();
         wanderers = new List<Wanderer>();
     }
+    
+    public void print(string msg)
+    {
+        Console.Error.WriteLine("[DEBUG] " + msg);
+    }
 
     public GraphCase addGraphCase(int x, int y, bool isPortalInvocator)
     {
@@ -409,7 +414,7 @@ class Game
             int index = e.position.index;
             while (index != -2)
             {
-                e.pathfinding.Add(graphCase[index]);
+                e.pathfinding.Insert(0, graphCase[index]);
                 index = backTrack[index];
             }
         }
@@ -420,7 +425,7 @@ class Game
             int index = e.position.index;
             while (index != -2)
             {
-                e.pathfinding.Add(graphCase[index]);
+                e.pathfinding.Insert(0, graphCase[index]);
                 index = backTrack[index];
             }
         }
@@ -428,11 +433,13 @@ class Game
 
     private GraphCase choiseAI()
     {
+        print("myPos: "+myExplorer.x+" "+myExplorer.y);
         Explorer proximityExplorer = null;
         foreach (var e in explorers)
         {
             if (e.isProximity(myExplorer))
             {
+                print("OtherExplorer x " + e.x + " y " + e.y);
                 proximityExplorer = e;
                 break;
             }
@@ -442,34 +449,35 @@ class Game
         Wanderer wandererNearest = null;
         foreach (var w in wanderersSortDistance)
         {
-            if (w.pathfinding.Count != 0)
-            {
-                wandererNearestDirection = w.pathfinding[0];
-                wandererNearest = w;
-                break;
-            }
+            if (w.pathfinding.Count > 1)
+                wandererNearestDirection = w.pathfinding[1];
+            else
+                wandererNearestDirection = w.position;
+            wandererNearest = w;
+            print("Wanderer x:" + w.x + " y:" + w.y+" direction x:"+wandererNearestDirection.x+" y:"+wandererNearestDirection.y);
+            break;
         }
 
         if (wandererNearestDirection != null)
         {
-            if (proximityExplorer != null)
+            if (proximityExplorer != null && wandererNearest.pathfinding.Count > 2)
             {
-                foreach (GraphCase c in myExplorer.position)
+                foreach (Explorer e in explorersSortDistance)
                 {
-                    if (proximityExplorer.isProximity(c) && c != wandererNearestDirection)
+                    if (proximityExplorer.isProximity(e) && e.pathfinding.Count > 1 && e.pathfinding[1] != wandererNearestDirection)
                     {
-                        return c;
+                        print("AI choise: A");
+                        return e.pathfinding[1];
                     }
                 }
-
-                return null;
             }
 
             foreach (var e in explorersSortDistance)
             {
-                if (e.pathfinding.Count != 0 && e.pathfinding[0] != wandererNearestDirection)
+                if (e.pathfinding.Count > 1 && e.pathfinding[1] != wandererNearestDirection)
                 {
-                    return e.pathfinding[0];
+                    print("AI choise: C");
+                    return e.pathfinding[1];
                 }
             }
 
@@ -477,22 +485,22 @@ class Game
             {
                 if (wandererNearestDirection != np)
                 {
+                    print("AI choise: D");
                     return np;
                 }
             }
-
+            
+            print("AI choise: E");
             return null;
         }
-        if(proximityExplorer != null)
-        {
-            return null;
-        }
+        if (proximityExplorer == null)
+            foreach (var e in explorersSortDistance)
+            {
+                print("AI choise: G");
+                return e.pathfinding[1];
+            }
 
-        foreach (var e in explorersSortDistance)
-        {
-            return e.pathfinding[0];
-        }
-
+        print("AI choise: H");
         return null;
     }
 

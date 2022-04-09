@@ -20,35 +20,13 @@ namespace TestProject1
         public void Setup()
         {
         }
-
-/*
-15
-13
-###############
-#.............#
-#.#.#.#.#.#.#.#
-#..w.......w..#
-#.#.#.#.#.#.#.#
-#.............#
-#.#.#.#.#.#.#.#
-#.............#
-#.#.#.#.#.#.#.#
-#..w.......w..#
-#.#.#.#.#.#.#.#
-#.............#
-###############
-3 1 3 40
-4
-EXPLORER 0 5 5 250 2 3
-EXPLORER 1 9 5 250 2 3
-EXPLORER 2 5 7 250 2 3
-EXPLORER 3 9 7 250 2 3 
-*/
+        
         [Test]
         public void Test1()
         {
-            string msg =
-                "15\n13\n###############\n#.............#\n#.#.#.#.#.#.#.#\n#..w.......w..#\n#.#.#.#.#.#.#.#\n#.............#\n#.#.#.#.#.#.#.#\n#.............#\n#.#.#.#.#.#.#.#\n#..w.......w..#\n#.#.#.#.#.#.#.#\n#.............#\n###############\n3 1 3 40\n4\nEXPLORER 0 5 5 250 2 3\nEXPLORER 1 9 5 250 2 3\nEXPLORER 2 5 7 250 2 3\nEXPLORER 3 9 7 250 2 3 ";
+            // msg is content file game.txt in project folder
+            //this.wanderers.Find(wanderer => wanderer.id==4) == graph[4,3]
+            var msg = File.ReadAllText("../../../game.txt");
             test(msg);
             Assert.Pass();
         }
